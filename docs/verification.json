@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-25",
+  "timezone": "Asia/Taipei",
+  "project_name": "2027論文",
+  "project_id": "6b06c6b088d147181fd08fe6",
+  "mcp_server": "olcli",
+  "olcli_version": "0.18.1",
+  "before_pages": 5,
+  "after_pages": 7,
+  "remote_matches_local": true,
+  "overleaf_compile": "passed",
+  "overfull_boxes": 0,
+  "undefined_references": 0,
+  "local_builtin_compiler": "unavailable: standard directories not found",
+  "visual_review": "all pages rendered and inspected",
+  "write_transport": "olcli CLI after MCP preview; user-approved",
+  "skill": "overleaf from aloth/olcli root SKILL.md",
+  "empirical_hiking_results": false,
+  "author_fields": "pending",
+  "files": {
+    "main.tex": {
+      "sha256": "d8f2bc8fbbaf0dd73715681b104ac59942bc1054b841798cc74f4129dd95e68d",
+      "bytes": 38373
+    },
+    "draft_before.tex": {
+      "sha256": "3806033d9406251c41d52f0e51101c506d20473f1205a48336b148f30ba87de5",
+      "bytes": 29213
+    },
+    "draft_before.pdf": {
+      "sha256": "a12ce4354a9ab4677c4d2e33a5c2cc9f1d7ceded51802b577e3b473275f37a24",
+      "bytes": 201390
+    },
+    "draft_after.pdf": {
+      "sha256": "836039f6e515e8ff42b8024e6e61a30e1c7fb2e524db5e9e2b36302b30a6d6f5",
+      "bytes": 209394
+    }
+  }
+}

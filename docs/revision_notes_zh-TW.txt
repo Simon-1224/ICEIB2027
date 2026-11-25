@@ -1,0 +1,44 @@
+老師要求對照與修改前後說明
+日期：2026-11-25
+
+1. Overleaf draft for IEEE conference
+修改前：draft_before.tex + draft_before.pdf，5 頁。
+既有初稿的 Git 提交：f5d4196（Add TrailGuard TW conference manuscript）。
+已透過 MCP 下載線上 main.tex 並確認與修改前本機檔案一致。
+採 IEEEtran conference 雙欄格式；ICEIB 官網要求英文全文 4–8 頁。
+
+2. 修改後
+main.tex + draft_after.pdf，7 頁，已更新至 Overleaf「2027論文」。
+修改內容：
+- 重寫摘要，凸顯證據有效期、三態決策與研究範圍。
+- Related Work 新增 ReWOO、Reflexion、LLMCompiler 三筆原始研究來源，總參考文獻由 5 筆增為 8 筆。
+- 新增跨雙欄的文獻機制比較表，區分既有方法與本專案額外需求。
+- 將文字堆疊式架構框改為 TikZ 方框與箭頭流程圖。
+- 新增具行號的 Algorithm 1，以及 preference invariance 設計性質。
+- 新增 RQ1–RQ3、Setup and Parameters，連結比較方法、消融與評估問題。
+- 新增 worked example 三態對照表，明確標示為合成範例。
+- 簡化決策公式記號，修正表格跨欄溢出及演算法引用編號。
+- 保留目標值與未實作限制，不捏造實驗或使用者研究。
+本次沒有建立山徑守護者的天氣／步道 MCP 實作；完成的是論文編修用的 olcli MCP 工作流程。
+
+3. 安裝指令與方法
+詳見 installation_zh-TW.txt，含 Node.js、olcli、Codex MCP、Session 登入、Overleaf Skill、驗收及 Git 工作流程。
+已安裝 olcli 0.18.1，Codex server 名稱 olcli；Overleaf Skill 已安裝，下一輪對話可用。
+
+4. 實際工具與驗證證據
+MCP：initialize 與 tools/list 成功；專案讀取、檔案下載及前後 PDF 編譯下載成功。
+更新：MCP push_file 因客戶端未宣告 elicitation 能力而回傳預覽，沒有寫入；核准後改用 olcli upload 更新 main.tex。沒有停用寫入確認。
+檔案核對：最終 Overleaf main.tex 與本機 main.tex 一致（容許 UTF-8 BOM 與結尾換行差異）。
+編譯：Overleaf pdfLaTeX 成功；最終日誌沒有 LaTeX Error、Overfull 或 undefined 引用。
+排版：前後 PDF 已逐頁渲染與檢查；修改後 7 頁。
+Codex 內建編譯器另行檢查時仍回報 Unable to find standard directories for platform，因此成功編譯證據來自 Overleaf，而非內建編譯器。
+
+5. 可交付與尚待本人補的資料
+本包可用於展示「初稿→工具連線→修改→編譯→Git 版本紀錄」的課堂流程。
+正式學術投稿仍需真實英文作者姓名、系所、學校、通訊信箱；目前以 Author Name(s) 等欄位保留。
+實作與實驗尚未完成，因此目前是系統架構與評估方案論文，不能宣稱已通過實測驗證。
+IEEE conference 為通用格式；投稿前仍需核對 ICEIB 最終出版路徑及當年度指定模板。
+原先放在 Overleaf 裡的舊 ZIP 是歷史附件，不是最新稿；線上 main.tex 與本交付包才是本次修改版。
+
+展示時可說：
+「我先用 IEEEtran 在 Overleaf 建立 5 頁初稿，透過 olcli MCP 讀取專案與編譯；用 AI 補上比較表、流程圖、演算法與範例，完成 7 頁修改稿，再用 GitHub 保存前後版本。工具登入與安裝方法也有紀錄。論文的評估數字是規劃目標，並不是實測結果。」

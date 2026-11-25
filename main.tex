@@ -3,8 +3,12 @@
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs,array}
+\usepackage{algorithmic}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
 \usepackage[hidelinks]{hyperref}
 \urlstyle{same}
+\newcounter{paperalgorithm}
 \newcommand{\sys}{TrailGuard TW}
 \newcommand{\tool}[1]{\texttt{#1}}
 \begin{document}
@@ -14,7 +18,7 @@
 \IEEEauthorblockA{Department and Institution\\City, Taiwan\\Corresponding author email}}
 \maketitle
 \begin{abstract}
-Mountain trip planning requires the integration of route characteristics, weather forecasts, trail restrictions, and team capabilities. These inputs differ in spatial coverage, validity periods, and reliability, making unsupported or outdated recommendations particularly problematic. This paper proposes TrailGuard TW, an evidence-grounded decision-support architecture for mountain trip planning in Taiwan. The architecture separates language-model-based requirement elicitation and explanation from deterministic computation and constraint enforcement. Model Context Protocol (MCP) tools provide typed interfaces to environmental data, route information, retrieval services, and analytical functions. A temporal evidence representation associates each claim with its source, applicable interval, and transformation history. A rule-based decision gate rejects candidates that violate authoritative restrictions and withholds recommendations when essential evidence is unresolved. Feasible alternatives are packaged with segment-level explanations, retreat checkpoints, and an auditable evidence ledger. We specify the eight functional modules, tool contracts, decision logic, and a planned evaluation comprising 90 route--team combinations and 30 adversarial cases. The contribution is a system design and evaluation protocol; no implemented deployment, measured performance, or field safety validation is claimed. The framework provides a testable basis for studying traceability, constraint compliance, and the limits of language-model-assisted outdoor planning.
+Mountain trip planning combines route characteristics, forecasts, access restrictions, and team capabilities whose spatial and temporal scopes may not agree. A fluent recommendation can therefore be unsupported even when it cites relevant documents. This paper proposes TrailGuard TW, an evidence-grounded decision-support architecture for mountain trips in Taiwan. A language model elicits requirements and coordinates typed Model Context Protocol (MCP) tools, while deterministic functions compute derived values and enforce restrictions. Temporal evidence records link observations to route segments, effective intervals, and computation histories. Before candidate ranking, a three-state gate distinguishes prohibited itineraries (NO-GO), unresolved essential evidence (HOLD), and candidates passing the configured checks (ADMISSIBLE). The design specifies eight modules, tool contracts, a bounded planning algorithm, and an auditable output package. A structured comparison relates the architecture to retrieval-augmented generation and tool-using agents. A planned evaluation combines 90 route--team scenarios and 30 adversarial cases, with controlled baselines and explicit metric denominators. Synthetic traces illustrate intended behavior; they are not experimental results. This work contributes a reproducible system specification and evaluation protocol, while leaving implementation, field validation, and measured effectiveness to future study.
 \end{abstract}
 \begin{IEEEkeywords}
 large language models, Model Context Protocol, retrieval-augmented generation, decision support, temporal evidence, mountain trip planning
@@ -31,13 +35,37 @@ This paper asks: \emph{How can a mountain-planning assistant expose heterogeneou
 
 The work fits research on applied AI, knowledge engineering, information retrieval, and intelligent planning. Its immediate deliverable is an inspectable design. Demonstrating operational utility requires implementing adapters, curating reference cases, and conducting the experiments described below.
 
-\section{Background and Design Rationale}
+\section{Related Work and Design Rationale}
 \subsection{Retrieval and Tool-Using Agents}
 RAG combines a language model with external retrieval~\cite{rag}. In this design, retrieval supports domain explanations and document-level evidence. Structured feeds remain the preferred input for machine-readable restrictions and numeric observations when available. A retrieved passage is not automatically accepted as an authoritative operational record.
 
 ReAct studies interleaving reasoning and actions to obtain information from external environments~\cite{react}. TrailGuard TW adopts task decomposition and tool interaction as design principles. However, it places admission decisions in explicit rules rather than allowing the LLM to infer unrestricted exceptions. The proposed separation makes errors in slot extraction, data acquisition, numerical analysis, and explanation independently observable.
 
 MCP defines interfaces through which servers expose named tools, input schemas, and tool results~\cite{mcp}. It is a tool-interoperability mechanism; it does not certify source correctness or enforce the application-specific decision policy. Our proposed use of MCP is to standardize the boundary between the LLM host and data or computation services. Direct API access could implement similar domain logic; whether MCP improves adapter maintainability is an empirical engineering question.
+
+\subsection{Comparison of Agent Design Patterns}
+ReWOO separates planning from observations to reduce repeated reasoning over tool outputs~\cite{rewoo}. Reflexion uses verbal feedback and episodic memory to improve subsequent attempts~\cite{reflexion}. LLMCompiler organizes function calls into an execution plan that can exploit parallelism~\cite{llmcompiler}. These approaches offer useful orchestration patterns, but their reported benchmark results do not establish compliance with mountain-specific restrictions.
+
+Table~\ref{tab:related} compares the mechanism of each reference with the additional checks required by this application. Its final column is our design analysis, not a claim that the cited work fails its own objectives. TrailGuard TW combines existing patterns with a domain-specific gate and provenance contract; novelty and effectiveness of the combination remain to be evaluated. Independent weather and access queries could be scheduled concurrently, but every response must pass the same temporal and schema checks before use.
+
+\begin{table*}[t]
+\caption{Related Mechanisms and Their Role in the Proposed Design}
+\label{tab:related}
+\centering\footnotesize
+\begin{tabular}{@{}p{0.15\textwidth}p{0.24\textwidth}p{0.25\textwidth}p{0.28\textwidth}@{}}
+\toprule
+Reference / approach & Main mechanism & Role in TrailGuard TW & Additional application requirement\\
+\midrule
+RAG~\cite{rag} & Generate with retrieved external evidence. & Retrieve guidance and explanatory passages. & Check source authority, route scope, and effective time.\\
+ReAct~\cite{react} & Interleave reasoning with external actions. & Clarify inputs and select data tools. & Bound tool calls and separate admission from explanation.\\
+ReWOO~\cite{rewoo} & Decouple planning from observations. & Inform reusable acquisition plans. & Replan when essential evidence is missing or conflicting.\\
+Reflexion~\cite{reflexion} & Use verbal feedback in episodic memory. & Inform offline error analysis and prompt revision. & Feedback must not rewrite authoritative restrictions.\\
+LLMCompiler~\cite{llmcompiler} & Schedule dependent and parallel function calls. & Inform concurrent independent acquisition. & Validate all results before the decision gate.\\
+MCP~\cite{mcp} & Discover and invoke schema-defined tools. & Standardize adapter interfaces. & Enforce domain semantics in the application.\\
+TrailGuard TW (proposed) & Temporal evidence, deterministic gate, and ledger. & Integrate the above roles for mountain planning. & Requires implementation and independent empirical evaluation.\\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 \subsection{Domain Evidence and Temporal Relevance}
 The Central Weather Administration (CWA) publishes an open-data API guide~\cite{cwa}. This establishes a candidate acquisition channel, not an implemented TrailGuard TW integration or a guarantee that every route has suitable forecast coverage. Each deployed adapter must document the selected dataset, credentials, spatial resolution, update behavior, and permitted use. Trail restrictions and water reports similarly require individually verified providers; this paper does not claim a universal trail-status API.
@@ -73,7 +101,7 @@ Planner/agent & Select bounded tool calls and track incomplete tasks.\\
 Data acquisition & Retrieve provider records with temporal and spatial metadata.\\
 Analytics engine & Compute segment times and evaluate versioned constraints.\\
 Domain knowledge & Retrieve guidance and maintain temporal evidence relationships.\\
-Decision/recommendation & Enforce NO-GO/HOLD gates before candidate ranking.\\
+Decision / recommendation & Enforce NO-GO/HOLD gates before candidate ranking.\\
 Output/interaction & Produce alternatives, checkpoints, and an evidence ledger.\\
 \bottomrule
 \end{tabular}
@@ -85,14 +113,24 @@ Figure~\ref{fig:architecture} depicts the proposed execution boundary. The conve
 
 \begin{figure}[t]
 \centering
-\fbox{\parbox{0.90\columnwidth}{\centering\small
-User request and clarification\\$\downarrow$\\
-LLM planner / MCP host\\$\downarrow$\\
-Approved MCP data, retrieval, and analytics tools\\$\downarrow$\\
-Temporal evidence store and deterministic analysis\\$\downarrow$\\
-Rule gate: NO-GO / HOLD / ADMISSIBLE\\$\downarrow$\\
-Candidate ranking and evidence-linked decision package}}
-\caption{Proposed workflow. The language model requests tools and explains outputs; the rule gate controls candidate admission.}
+\begin{tikzpicture}[
+ node distance=3.3mm,
+ box/.style={draw,rounded corners=1pt,align=center,font=\scriptsize,
+ text width=0.75\columnwidth,minimum height=6.5mm,inner sep=2.5pt},
+ link/.style={-{Latex[length=1.7mm]},line width=0.45pt}]
+\node[box] (input) {User request: route, dates, team, preferences};
+\node[box,below=of input] (planner) {LLM planner / MCP host\\Validate required fields; request clarification};
+\node[box,below=of planner] (tools) {Approved MCP tools\\Weather, access status, guidance, analytics};
+\node[box,below=of tools] (evidence) {Temporal evidence store\\Scope, freshness, conflicts, source identifiers};
+\node[box,below=of evidence] (gate) {Deterministic decision gate\\NO-GO / HOLD / ADMISSIBLE};
+\node[box,below=of gate] (output) {Rank admissible candidates only\\Decision package and claim-level evidence ledger};
+\draw[link] (input)--(planner);
+\draw[link] (planner)--(tools);
+\draw[link] (tools)--(evidence);
+\draw[link] (evidence)--(gate);
+\draw[link] (gate)--(output);
+\end{tikzpicture}
+\caption{Proposed flowchart. Rejected or unresolved candidates are explained but never enter the ranked recommendation set.}
 \label{fig:architecture}
 \end{figure}
 
@@ -141,12 +179,12 @@ For segment $j$, the engine computes a duration estimate
 \end{equation}
 where $d_j$ is distance, $\Delta z_j$ elevation information, $g_j$ route attributes, and $p$ team pace information. The function and parameters $\theta$ must be documented and calibrated against independent observations. This specification does not select an established walking-time formula or claim validated coefficients. Reported intervals must identify their calibration basis; absent calibration, they remain engineering estimates.
 
-Let $H(c,E_c)$ mean that an authoritative prohibition applies, $U(c,E_c)$ that essential information is unresolved, and $C(c,E_c)$ that all other required deterministic checks pass. The gate is
+Let $h_c=H(c,E_c)$ indicate an applicable authoritative prohibition, $u_c=U(c,E_c)$ unresolved essential information, and $k_c=C(c,E_c)$ satisfaction of all other required deterministic checks. The gate is
 \begin{equation}
  D(c,E_c)=\begin{cases}
- \text{NO-GO},& H(c,E_c),\\
- \text{HOLD},& \neg H(c,E_c)\land U(c,E_c),\\
- \text{ADMISSIBLE},&\neg H(c,E_c)\land\neg U(c,E_c)\land C(c,E_c),\\
+ \text{NO-GO},& h_c,\\
+ \text{HOLD},& \neg h_c\land u_c,\\
+ \text{ADMISSIBLE},&\neg h_c\land\neg u_c\land k_c,\\
  \text{NO-GO},&\text{otherwise}.
  \end{cases}
 \end{equation}
@@ -156,14 +194,61 @@ Ranking is performed only over $\mathcal F=\{c:D(c,E_c)=\text{ADMISSIBLE}\}$. Pr
 
 A retreat checkpoint combines the estimated return duration, a documented time boundary such as a relevant daylight constraint, and an explicitly configured margin. Unsupported precision is avoided. Illness-related inputs trigger only reviewed guidance or referral logic; they are not converted by the LLM into medical clearance.
 
+\subsection{Algorithm and Key Property}
+Algorithm~\ref{alg:gate} gives the proposed control logic. A tool call consumes budget even if it fails; acquisition records errors rather than silently substituting observations. Candidate templates may be formed from cached route geometry, but admission still requires applicable evidence for the requested interval. No execution of this algorithm is claimed in the present study.
+
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.97\columnwidth}
+\hrule\vspace{3pt}
+\refstepcounter{paperalgorithm}\label{alg:gate}
+\textbf{Algorithm \thepaperalgorithm: Bounded evidence-grounded planning}\par
+\begin{algorithmic}[1]
+\REQUIRE Request $x$, tool budget $B$, policy version $v$
+\ENSURE Decision states, admissible set, evidence ledger
+\STATE Normalize $x$ and check required fields
+\IF{essential fields are missing}
+\STATE \textbf{return} HOLD and clarification questions
+\ENDIF
+\STATE $E\leftarrow$ acquire approved evidence within budget $B$
+\STATE Validate schemas, units, scope, freshness, conflicts
+\STATE $\mathcal C\leftarrow$ generate candidate templates for $x$
+\STATE $\mathcal F\leftarrow\emptyset$; initialize ledger $L$
+\FOR{each candidate $c\in\mathcal C$}
+\STATE Link relevant evidence $E_c$ and policy $v$ to $L$
+\IF{an authoritative prohibition applies}
+\STATE Record NO-GO and its supporting evidence
+\ELSIF{essential evidence is unresolved}
+\STATE Record HOLD and unresolved reason codes
+\ELSE
+\STATE Compute durations and evaluate remaining checks
+\IF{all required checks pass}
+\STATE Record ADMISSIBLE; $\mathcal F\leftarrow\mathcal F\cup\{c\}$
+\ELSE
+\STATE Record NO-GO and failed-check reason codes
+\ENDIF
+\ENDIF
+\ENDFOR
+\STATE Rank $\mathcal F$ by preferences; select up to three
+\STATE Validate every generated numerical claim against $L$
+\STATE Omit unsupported claims and flag dependent outputs
+\STATE \textbf{return} candidates, states, reasons, and $L$
+\end{algorithmic}
+\vspace{3pt}\hrule
+\end{minipage}
+\caption{Proposed algorithm; an unimplemented specification.}
+\end{figure}
+
+A useful design property is \emph{preference invariance of rejection}: for fixed candidates, evidence, policy, and team capabilities, changing preference-ranking weights cannot turn a NO-GO or HOLD state into ADMISSIBLE. This follows from constructing $\mathcal F$ before ranking; the gate contains no ranking weight. It is a property of the specified control flow, not a proof that the evidence or policy is correct. Likewise, a numerical claim failing ledger validation must be omitted, and any decision depending on that value must be withheld or recomputed.
+
 \subsection{Output and Audit Trail}
 The decision package contains the request assumptions, decision state, candidate segments, cited constraints, retreat checkpoints, and unresolved uncertainties. Each material numerical claim references an evidence or computation identifier. Computation records retain input IDs, units, function version, parameters, and output. A dashboard may visualize these records, while an offline card can summarize the itinerary and preselected emergency information.
 
 The offline artifact includes creation time and a revalidation notice because exported information can become obsolete. Its provenance supports later inspection but cannot replace updated conditions. The package includes no fabricated water report, route status, emergency contact, or individual health-risk percentage. Missing information is displayed explicitly.
 
-\section{Evaluation Protocol}
+\section{Evaluation Design and Data}
 \subsection{Research Questions and Dataset}
-The planned study asks whether explicit gating reduces unsafe approvals, whether the ledger improves supported-claim coverage, and how data failures affect availability and latency. Dataset construction and empirical evaluation are future work.
+Three research questions structure the planned study. RQ1 asks whether explicit gating reduces unsafe approvals relative to the tool-enabled baseline. RQ2 asks whether temporal filtering and ledger enforcement improve supported-claim coverage. RQ3 asks how missing data and tool failures affect completion and latency. Dataset construction and empirical evaluation are future work.
 
 The proposed benchmark contains 30 Taiwan routes crossed with three team profiles, giving 90 core cases, plus 30 adversarial cases, for 120 cases in total. Profiles will encode distinct experience and pace assumptions rather than stereotypes. Each case must include a fixed travel interval, archived evidence snapshot, expected state, and expert-reviewed reasons. Route selection must report difficulty, geography, evidence coverage, and exclusion criteria.
 
@@ -171,10 +256,15 @@ Ten adversarial categories with three cases each are planned: stale forecasts, a
 
 Experts will label the reference states without seeing model outputs, document disagreements, and use an adjudication procedure. Data used for tuning retrieval or calculation parameters must be separated from held-out test cases. Reused routes create correlated observations, so uncertainty estimates should resample by route rather than treating all route--profile pairs as independent.
 
-\subsection{Baselines and Ablations}
+\subsection{Compared Methods and Ablations}
 Four configurations are planned: an LLM-only assistant; a retrieval-assisted LLM with the same evidence corpus; an MCP tool-enabled assistant without the explicit decision gate; and the full proposed architecture. Model version, decoding settings, prompts, snapshots, and allowed evidence are controlled wherever applicable. A baseline without live tools receives equivalent archived information when the comparison concerns decision logic.
 
 Additional ablations remove temporal filtering or ledger enforcement one at a time. MCP versus direct API integration is a separate engineering comparison with the same underlying tools. This prevents attributing benefits of domain rules to the transport protocol. Adapter implementation effort, schema-related failures, and maintenance changes should be reported for that comparison if implemented.
+
+\subsection{Setup and Parameters}
+Each configuration will use the same route--team request and frozen evidence snapshot. The study will record model identifier, decoding parameters, prompt revision, retrieval settings, policy version, and tool schemas. Tool-call budget $B$, timeout $T$, retry limit $R$, and source-specific freshness limits $\delta_s$ are configurable parameters, not values optimized in this manuscript. They must be fixed using development data before the held-out evaluation. The report will identify cache state and whether acquisition calls ran serially or concurrently.
+
+For RQ1, compare paired decisions on identical cases. For RQ2, inspect claim support and coverage under the two ablations. For RQ3, inject the predefined acquisition failures and record HOLD frequency, task completion, and latency. Repeated stochastic runs must report their number and remain grouped by route during uncertainty analysis. A results table must distinguish case counts, repeated runs, and human participants rather than treating them as interchangeable sample sizes.
 
 \subsection{Metrics and Target Values}
 Table~\ref{tab:metrics} lists prospective acceptance criteria, not observations. Their feasibility remains untested. To avoid denominator ambiguity, unsafe approval rate is
@@ -224,18 +314,35 @@ This requires at least 149 independent prohibited cases to put that bound below 
 
 The reproducibility package should preserve case definitions, evidence snapshots subject to licensing, prompts, model identifiers, tool schemas, policy versions, random seeds where applicable, raw outputs, adjudicated labels, and metric scripts. Failed calls and abstentions remain in the record. Source credentials and identifying health details must be removed before release.
 
-\section{Illustrative Trace and Discussion}
-\subsection{Synthetic Decision Trace}
+\section{Worked Example and Discussion}
+\subsection{Worked Example: Synthetic Decision Trace}
 Consider a synthetic request for a named route on a specified future day, with team size and pace supplied. No real route, live forecast, or actual closure is asserted in this example. The planner resolves the route identifier and calls the weather and trail-status tools. Suppose the status tool returns an authoritative closed record whose effective interval covers the requested traverse. The ledger stores the notice, and the gate returns NO-GO with that evidence ID. Candidate ranking is skipped for the affected route even if its length and weather score would otherwise match the user's preferences.
 
 In a second synthetic variant, the trail-status service times out and no applicable archived record exists. The output is HOLD rather than an inference that no closure exists. A third variant supplies current, consistent essential records and a candidate passing the configured checks; only then may the system rank that candidate as ADMISSIBLE. These traces illustrate intended transitions and should become executable acceptance tests. They are not observed execution logs or evidence of performance.
+
+\begin{table}[t]
+\caption{Synthetic Examples: Intended Outputs, Not Measurements}
+\label{tab:synthetic}
+\centering\footnotesize
+\begin{tabular}{@{}p{0.30\columnwidth}p{0.23\columnwidth}p{0.37\columnwidth}@{}}
+\toprule
+Evidence condition & State & Required explanation\\
+\midrule
+Applicable authoritative closure & NO-GO & Cite notice and effective interval; skip ranking.\\
+Essential access status unavailable & HOLD & Name the missing record; request revalidation.\\
+Applicable evidence; all configured checks pass & ADMISSIBLE & Cite checks and assumptions; rank with limitations.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:synthetic} summarizes the expected transitions. For instance, a trace record could link candidate \texttt{C1}, notice \texttt{E1}, and policy \texttt{V1} to a NO-GO reason code. These identifiers are illustrative placeholders, not retrieved records. A subsequent change in preferences leaves the rejection unchanged; replacing an expired observation with a newly validated record requires rerunning the gate. This makes the difference between preference updates and evidence updates inspectable.
 
 \subsection{Limitations and Implementation Dependencies}
 The design cannot yet establish reduced accident risk, reliable route coverage, numerical accuracy, or user acceptance. Implementation depends on provider-specific adapters, geospatial matching, expert-reviewed rules, calibrated duration estimates, and a functioning MCP host. The proposed temporal graph may increase operational cost; its value over a simpler timestamped record store must be tested.
 
 A rule-based gate is only as complete as its rules and evidence. An open status is not proof that every segment is traversable. Conservative handling of uncertainty may lower completion rates, while permissive freshness policies may increase unsupported approvals. These tradeoffs require reporting abstention and error rates together. Personal information, especially health-related inputs, requires appropriate access controls and retention policies.
 
-The draft's contribution is architectural specificity and an evaluation plan. Once implementation and measurements exist, the illustrative section should be replaced or expanded with results, error analysis, and ablation findings. Any claim of superiority or field readiness must be supported by those data.
+The present contribution is architectural specificity and an evaluation protocol. Subsequent empirical work should report results, error analysis, and ablation findings against this specification. Any claim of superiority or field readiness must be supported by those data.
 
 \section{Conclusion}
 TrailGuard TW is proposed as an evidence-grounded mountain-planning assistant that separates conversational reasoning from deterministic analysis and decision gating. MCP supplies a standard interface for proposed tools, while temporal evidence records and a claim-level ledger support inspection of recommendations. The architecture preserves authoritative restrictions and unresolved uncertainty before ranking candidate itineraries. A planned 120-case evaluation defines baselines, adversarial cases, metrics, and reproducibility requirements, while acknowledging its limits for low-rate safety claims. Future work is to implement the specified interfaces, validate domain policies, and report independent empirical results.
@@ -243,9 +350,11 @@ TrailGuard TW is proposed as an evidence-grounded mountain-planning assistant th
 \begin{thebibliography}{00}
 \bibitem{rag} P. Lewis \emph{et al.}, ``Retrieval-augmented generation for knowledge-intensive NLP tasks,'' in \emph{Advances in Neural Information Processing Systems}, vol. 33, 2020, pp. 9459--9474. [Online]. Available: \url{https://arxiv.org/abs/2005.11401}
 \bibitem{react} S. Yao \emph{et al.}, ``ReAct: Synergizing reasoning and acting in language models,'' in \emph{Proc. International Conference on Learning Representations}, 2023. [Online]. Available: \url{https://arxiv.org/abs/2210.03629}
+\bibitem{rewoo} B. Xu \emph{et al.}, ``ReWOO: Decoupling reasoning from observations for efficient augmented language models,'' arXiv:2305.18323, 2023. [Online]. Available: \url{https://arxiv.org/abs/2305.18323}
+\bibitem{reflexion} N. Shinn \emph{et al.}, ``Reflexion: Language agents with verbal reinforcement learning,'' arXiv:2303.11366, 2023. [Online]. Available: \url{https://arxiv.org/abs/2303.11366}
+\bibitem{llmcompiler} S. Kim \emph{et al.}, ``An LLM compiler for parallel function calling,'' arXiv:2312.04511, 2024. [Online]. Available: \url{https://arxiv.org/abs/2312.04511}
 \bibitem{mcp} Model Context Protocol, ``Tools,'' specification revision 2025-11-25. Accessed: Nov. 25, 2026. [Online]. Available: \url{https://modelcontextprotocol.io/specification/2025-11-25/server/tools}
 \bibitem{cwa} Central Weather Administration, ``Open data API developer guide.'' Accessed: Nov. 25, 2026. [Online]. Available: \url{https://opendata.cwa.gov.tw/devManual/description}
 \bibitem{sus} J. Brooke, ``SUS: A `quick and dirty' usability scale,'' in \emph{Usability Evaluation in Industry}, P. W. Jordan, B. Thomas, B. A. Weerdmeester, and I. L. McClelland, Eds. London, U.K.: Taylor \& Francis, 1996, pp. 189--194.
 \end{thebibliography}
 \end{document}
-

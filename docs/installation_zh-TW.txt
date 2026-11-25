@@ -1,0 +1,87 @@
+Windows：Codex + olcli MCP + Overleaf Skill 安裝與使用
+驗證日期：2026-11-25（Asia/Taipei）
+
+一、前置工具
+安裝 Node.js LTS（Windows .msi，含 npm），並準備 Codex 與 Git。
+Node.js：https://nodejs.org/en/download
+Codex MCP 文件：https://learn.chatgpt.com/docs/extend/mcp
+重新開啟 PowerShell，確認：
+  node --version
+  npm.cmd --version
+  codex --version
+  git --version
+若顯示找不到指令，先處理該工具的安裝／PATH，再繼續。
+以下是同學可用的通用安裝方法；本次電腦使用 Codex 隨附 Node v24.22.1 與工作區安裝，無須重裝。
+
+二、安裝 olcli（本次驗證版本 0.18.1）
+  npm.cmd install -g @aloth/olcli@0.18.1
+  olcli.cmd --version
+使用 .cmd 可避免 PowerShell 誤選被執行原則阻擋的 .ps1 包裝器。不需要變更系統執行原則。
+第三方專案來源：https://github.com/aloth/olcli
+
+三、登入 Overleaf
+先試：
+  olcli.cmd auth --browser
+在跳出的視窗自行完成登入。這和 Codex 右側內建瀏覽器的登入狀態分開。
+若 Google 顯示「這個瀏覽器或應用程式可能有安全疑慮」，停止重試同一流程，改用下列 olcli 支援的工作階段匯入：
+1. 在平常的 Chrome／Edge 登入 https://www.overleaf.com/project 。
+2. F12 > Application（應用程式）> Cookies > https://www.overleaf.com 。
+3. 找到 overleaf_session2，只複製 Value。
+4. 執行：
+  olcli.cmd auth --cookie
+5. 貼入隱藏輸入提示。Cookie 等同登入憑證，不貼到聊天、GitHub、作業截圖或共享文件。
+6. 驗證：
+  olcli.cmd list
+工作階段到期時，重新登入或匯入新的 Cookie。無須刪除論文專案。
+
+四、把 olcli MCP 加入 Codex
+  codex mcp add olcli -- cmd.exe /c olcli-mcp.cmd
+  codex mcp get olcli
+  codex mcp list
+重新啟動 Codex 或重新載入 MCP，讓工具出現在新會話中。請向 AI 提出可驗證的要求：
+「請透過 olcli MCP 呼叫 list_projects，讀取我的 Overleaf 專案列表。」
+只看到 enabled 設定不代表登入成功；必須實際成功讀取專案。
+本次已透過 MCP 的 initialize、tools/list、list_projects、get_project_info、download_file、download_pdf 驗證。
+若 MCP 工具要求確認變更，請核對專案、路徑與差異後再決定。不要關閉工具的寫入確認。
+若客戶端沒有 elicitation 確認能力，push_file 會提供預覽而不寫入；可由使用者審閱後，明確授權執行所提供的 olcli upload 命令。
+
+五、安裝 Overleaf Skill
+在一般已安裝 Node.js 的電腦執行：
+  npx.cmd skills add aloth/olcli
+若出現安裝選擇，選 Overleaf skill 與 Codex；安裝後開啟新會話／重新載入。
+本次 Codex 已使用內建 Skill Installer，從 aloth/olcli 儲存庫根目錄的 SKILL.md 安裝為 overleaf。
+來源：https://github.com/aloth/olcli/blob/main/SKILL.md
+MCP 提供工具介面；Skill 提供操作流程，兩者不是同一個安裝項目。
+
+六、論文前後修改流程
+1. 保存初稿的 .tex 與編譯 PDF，並做一次 Git 提交。
+2. 提示 AI：
+「請讀取論文初稿，維持 IEEE conference 格式，改善摘要與研究問題，新增文獻比較表、流程圖、演算法及 worked example；所有未執行實驗都必須標示為規劃。修改後編譯、比較前後版本並列出變更。」
+3. 修改既有 main.tex；不要把新成果貼回初稿冒充修改前內容。
+4. 上傳前先讀取線上版本，檢查是否有同學的新修改。
+5. 核准後只上傳目標檔案，範例：
+  $projectId = "你的Overleaf專案ID"
+  olcli.cmd upload --to main.tex .\main.tex $projectId
+6. 編譯及下載，範例：
+  olcli.cmd pdf --help
+  olcli.cmd pdf -o .\draft_after.pdf $projectId
+專案 ID 是位置參數；可先用 --help 核對目前版本。
+7. PDF 視覺檢查後，提交 GitHub：
+  git add main.tex
+  git commit -m "Revise IEEE conference draft"
+  git push
+GitHub、Overleaf、本機不會因為註冊 MCP 就自動互相同步；每次更新仍需指定方向。
+
+七、驗收
+[ ] 能讀取 Overleaf 專案列表。
+[ ] 有初稿及修改後 .tex／PDF。
+[ ] 能描述實際修改，不把模擬例子寫成實測結果。
+[ ] 修改後可編譯，沒有缺失引用或跨欄溢出。
+[ ] 有 GitHub 提交紀錄和安裝方法。
+[ ] 截圖與公開檔案不含 Cookie、密碼、.olauth 或設定檔中的秘密。
+
+參考：
+https://github.com/aloth/olcli
+https://github.com/aloth/olcli/blob/main/docs/MCP.md
+https://learn.chatgpt.com/docs/extend/mcp
+https://www.overleaf.com/latex/templates/ieee-conference-template/grfzhhncsfqn

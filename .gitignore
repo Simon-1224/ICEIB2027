@@ -1,0 +1,14 @@
+# Authentication and private settings
+.olauth
+.env
+.env.*
+*.cookie
+*cookie-jar*
+node_modules/
+# Local LaTeX build files
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
